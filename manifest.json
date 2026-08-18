@@ -1,1 +1,13 @@
-{"name":"Inspecciones de Infraestructura","short_name":"Inspecciones","start_url":"./","display":"standalone","background_color":"#f4f6f8","theme_color":"#0b57d0","lang":"es"}
+{
+  "name": "Inspecciones de Infraestructura",
+  "short_name": "Inspecciones",
+  "description": "Aplicación para inspecciones de infraestructura por áreas y puntos, con fotografías y reportes mensuales.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f6f8",
+  "theme_color": "#0b57d0",
+  "lang": "es",
+  "categories": ["business", "productivity"]
+}
