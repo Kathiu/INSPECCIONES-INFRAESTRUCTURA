@@ -7,8 +7,9 @@ function doGet(e) {
     return HtmlService.createHtmlOutput(html).setTitle('Reporte mensual de inspección');
   }
   if (p.action === 'check') {
-    const exists = !!DriveApp.getFilesByName(String(p.id || '') + '.json').hasNext();
-    const result = {ok: exists, id: p.id || ''};
+    const id = String(p.id || '');
+    const exists = fileExistsInFolderTree_(getOrCreateFolder_(ROOT_FOLDER_NAME), id + '.json');
+    const result = {ok: exists, id: id};
     if (p.prefix) return ContentService.createTextOutput(String(p.prefix) + '(' + JSON.stringify(result) + ')').setMimeType(ContentService.MimeType.JAVASCRIPT);
     return json_(result);
   }
@@ -137,6 +138,13 @@ function collectInspectionFiles_(folder, rows) {
   }
   const sub=folder.getFolders();
   while(sub.hasNext()) collectInspectionFiles_(sub.next(),rows);
+}
+
+function fileExistsInFolderTree_(folder, fileName) {
+  if (folder.getFilesByName(fileName).hasNext()) return true;
+  const sub = folder.getFolders();
+  while (sub.hasNext()) if (fileExistsInFolderTree_(sub.next(), fileName)) return true;
+  return false;
 }
 
 function unique_(arr){return Array.from(new Set(arr));}
