@@ -1,22 +1,21 @@
 (() => {
-  const button = document.getElementById('saveReportDrive');
-  if (!button) return;
-  button.onclick = async () => {
-    const url = localStorage.getItem('inspecciones_drive_url');
-    if (!url) return alert('Primero conecte Google Drive.');
-    if (!navigator.onLine) return alert('No hay Internet. Para guardar el reporte en Drive necesita conexión.');
-    const mes = document.getElementById('reportMonth').value;
-    const anio = Number(document.getElementById('reportYear').value);
-    button.disabled = true;
-    try {
-      // El servidor genera el reporte directamente desde las inspecciones y fotografías ya sincronizadas en Drive.
-      await fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'syncReport',anio,mes,nombre:`Reporte_${anio}_${mes}`})});
-      alert(`Reporte de ${mes} ${anio} enviado a Google Drive.\n\nSe guardará como PDF y HTML en INSPECCIONES_INFRAESTRUCTURA / REPORTES_MENSUALES / ${anio} / ${mes}.`);
-    } catch(e) {
-      console.error(e);
-      alert('No se pudo solicitar el reporte en Drive.');
-    } finally {
-      button.disabled=false;
-    }
-  };
+  const saveButton = document.getElementById('saveReportDrive');
+  const reportButton = document.getElementById('report');
+  const getConfig = () => ({url:localStorage.getItem('inspecciones_drive_url')||'',mes:document.getElementById('reportMonth').value,anio:Number(document.getElementById('reportYear').value)});
+  async function saveToDrive(button, openAfter) {
+    const {url,mes,anio}=getConfig();
+    if(!url)return alert('Primero conecte Google Drive.');
+    if(!navigator.onLine)return alert('No hay Internet. Para generar el reporte mensual necesita conexión.');
+    button.disabled=true;
+    const prefix='reportCallback_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    const script=document.createElement('script'); let timer;
+    const cleanup=()=>{clearTimeout(timer);delete window[prefix];if(script.parentNode)script.parentNode.removeChild(script);button.disabled=false};
+    window[prefix]=(r)=>{cleanup();if(!r||!r.ok)return alert('No se pudo generar el reporte: '+((r&&r.error)||'error desconocido'));if(openAfter)window.open(r.url,'_blank');else alert(`Reporte de ${mes} ${anio} guardado correctamente en Google Drive.\n\nPDF: ${r.id}`)};
+    script.src=url+'?action=generateReport&anio='+encodeURIComponent(anio)+'&mes='+encodeURIComponent(mes)+'&nombre='+encodeURIComponent(`Reporte_${anio}_${mes}`)+'&prefix='+encodeURIComponent(prefix)+'&t='+Date.now();
+    script.onerror=()=>{cleanup();alert('No se pudo conectar con Google Drive. Verifique que la URL /exec siga activa.')};
+    document.body.appendChild(script);
+    timer=setTimeout(()=>{cleanup();alert('El reporte está tardando más de lo esperado. Revise REPORTES_MENSUALES en Google Drive antes de volver a intentarlo.')},30000);
+  }
+  if(saveButton)saveButton.onclick=()=>saveToDrive(saveButton,false);
+  if(reportButton)reportButton.onclick=()=>saveToDrive(reportButton,true);
 })();
