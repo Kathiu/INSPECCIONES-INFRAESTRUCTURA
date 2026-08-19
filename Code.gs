@@ -6,6 +6,19 @@ function doGet(e) {
     const html = buildReportHtml_(p.anio || new Date().getFullYear(), p.mes || 'SIN_MES');
     return HtmlService.createHtmlOutput(html).setTitle('Reporte mensual de inspección');
   }
+  if (p.action === 'generateReport') {
+    try {
+      const result = syncReport_({anio:p.anio, mes:p.mes, nombre:p.nombre || ('Reporte_' + p.anio + '_' + p.mes)});
+      const prefix = String(p.prefix || '');
+      if (prefix) return ContentService.createTextOutput(prefix + '(' + result.getContent() + ')').setMimeType(ContentService.MimeType.JAVASCRIPT);
+      return result;
+    } catch (err) {
+      const obj = {ok:false,error:String(err && err.message ? err.message : err)};
+      const prefix = String(p.prefix || '');
+      if (prefix) return ContentService.createTextOutput(prefix + '(' + JSON.stringify(obj) + ')').setMimeType(ContentService.MimeType.JAVASCRIPT);
+      return json_(obj);
+    }
+  }
   if (p.action === 'check') {
     const id = String(p.id || '');
     const exists = fileExistsInFolderTree_(getOrCreateFolder_(ROOT_FOLDER_NAME), id + '.json');
