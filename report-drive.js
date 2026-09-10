@@ -1,8 +1,9 @@
 (() => {
   const saveButton = document.getElementById('saveReportDrive');
+  const DEFAULT_DRIVE_URL = 'https://script.google.com/macros/s/AKfycbyZTSszJTLhDIL2N2ziazXlPLcRUCia92ee-zRmCAEW7F-fAWUZappzlel-zqDtmH0Gng/exec';
 
   const getConfig = () => ({
-    url: localStorage.getItem('inspecciones_drive_url') || '',
+    url: localStorage.getItem('inspecciones_drive_url') || DEFAULT_DRIVE_URL,
     mes: document.getElementById('reportMonth').value,
     anio: Number(document.getElementById('reportYear').value)
   });
@@ -21,14 +22,12 @@
     }
 
     const nombre = 'Reporte_' + anio + '_' + mes;
-
     const payload = JSON.stringify({
       action: 'syncReport',
       anio: anio,
       mes: mes,
       nombre: nombre
     });
-
     const oldText = saveButton ? saveButton.textContent : '';
 
     if (saveButton) {
@@ -40,19 +39,10 @@
       await fetch(url, {
         method: 'POST',
         mode: 'no-cors',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
-        },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: payload
       });
 
-      /*
-       * No mostramos "guardado correctamente" inmediatamente,
-       * porque no-cors no permite leer la respuesta.
-       *
-       * Esperamos unos segundos para dar tiempo a Apps Script
-       * a crear el archivo.
-       */
       await new Promise(resolve => setTimeout(resolve, 3000));
 
       alert(
@@ -60,35 +50,21 @@
         'Revise la carpeta:\n' +
         'INSPECCIONES_INFRAESTRUCTURA → REPORTES_MENSUALES → ' +
         anio + ' → ' + mes +
-        '\n\n' +
-        'Si el PDF no aparece, continuaremos con la corrección de la conexión.'
+        '\n\nEl PDF se genera a partir de las inspecciones que ya fueron sincronizadas con Drive.'
       );
-
     } catch (e) {
       console.error(e);
-
       alert(
         '❌ No se pudo enviar el reporte a Google Drive.\n\n' +
         'La información de sus inspecciones permanece guardada en el teléfono.'
       );
-
     } finally {
       if (saveButton) {
         saveButton.disabled = false;
-        saveButton.textContent =
-          oldText || '☁️ Guardar reporte en Drive';
+        saveButton.textContent = oldText || '☁️ Guardar reporte en Drive';
       }
     }
   }
 
-  /*
-   * IMPORTANTE:
-   * Solo el botón "Guardar reporte en Drive"
-   * usa esta función.
-   *
-   * NO modificamos el botón "Generar reporte mensual".
-   */
-  if (saveButton) {
-    saveButton.onclick = saveReportToDrive;
-  }
+  if (saveButton) saveButton.onclick = saveReportToDrive;
 })();
