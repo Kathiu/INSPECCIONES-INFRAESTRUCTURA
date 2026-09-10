@@ -1,53 +1,94 @@
 (() => {
   const saveButton = document.getElementById('saveReportDrive');
-  const reportButton = document.getElementById('report');
+
   const getConfig = () => ({
     url: localStorage.getItem('inspecciones_drive_url') || '',
     mes: document.getElementById('reportMonth').value,
     anio: Number(document.getElementById('reportYear').value)
   });
 
-  async function generateAndSave() {
+  async function saveReportToDrive() {
     const { url, mes, anio } = getConfig();
-    if (!url) return alert('Primero conecte Google Drive.');
-    if (!navigator.onLine) return alert('No hay Internet. Para generar el reporte mensual necesita conexión.');
+
+    if (!url) {
+      return alert('Primero conecte Google Drive.');
+    }
+
+    if (!navigator.onLine) {
+      return alert(
+        'No hay Internet. Para guardar el reporte en Google Drive necesita conexión.'
+      );
+    }
 
     const nombre = 'Reporte_' + anio + '_' + mes;
+
     const payload = JSON.stringify({
       action: 'syncReport',
-      anio,
-      mes,
-      nombre
+      anio: anio,
+      mes: mes,
+      nombre: nombre
     });
 
-    const button = reportButton;
-    const oldText = button ? button.textContent : '';
-    if (button) {
-      button.disabled = true;
-      button.textContent = '⏳ Generando reporte…';
+    const oldText = saveButton ? saveButton.textContent : '';
+
+    if (saveButton) {
+      saveButton.disabled = true;
+      saveButton.textContent = '⏳ Guardando reporte…';
     }
 
     try {
-      // Enviamos el reporte por POST sin abrir /exec en el navegador.
-      // Esto evita el conflicto con la cuenta personal de Google del teléfono.
       await fetch(url, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
         body: payload
       });
 
-      alert('✅ Reporte mensual generado y guardado en Google Drive.\n\nRuta: INSPECCIONES_INFRAESTRUCTURA → REPORTES_MENSUALES → ' + anio + ' → ' + mes);
+      /*
+       * No mostramos "guardado correctamente" inmediatamente,
+       * porque no-cors no permite leer la respuesta.
+       *
+       * Esperamos unos segundos para dar tiempo a Apps Script
+       * a crear el archivo.
+       */
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      alert(
+        '☁️ Solicitud enviada a Google Drive.\n\n' +
+        'Revise la carpeta:\n' +
+        'INSPECCIONES_INFRAESTRUCTURA → REPORTES_MENSUALES → ' +
+        anio + ' → ' + mes +
+        '\n\n' +
+        'Si el PDF no aparece, continuaremos con la corrección de la conexión.'
+      );
+
     } catch (e) {
-      alert('No se pudo enviar el reporte a Google Drive. Se mantiene la información de las inspecciones.');
+      console.error(e);
+
+      alert(
+        '❌ No se pudo enviar el reporte a Google Drive.\n\n' +
+        'La información de sus inspecciones permanece guardada en el teléfono.'
+      );
+
     } finally {
-      if (button) {
-        button.disabled = false;
-        button.textContent = oldText || '📄 Generar reporte mensual';
+      if (saveButton) {
+        saveButton.disabled = false;
+        saveButton.textContent =
+          oldText || '☁️ Guardar reporte en Drive';
       }
     }
   }
 
-  if (reportButton) reportButton.onclick = generateAndSave;
-  if (saveButton) saveButton.onclick = generateAndSave;
+  /*
+   * IMPORTANTE:
+   * Solo el botón "Guardar reporte en Drive"
+   * usa esta función.
+   *
+   * NO modificamos el botón "Generar reporte mensual".
+   */
+  if (saveButton) {
+    saveButton.onclick = saveReportToDrive;
+  }
 })();
