@@ -20,14 +20,111 @@ function doGet(e) {
     }
   }
   if (p.action === 'check') {
-    const id = String(p.id || ''); const result = {ok:fileExistsInFolderTree_(getOrCreateFolder_(ROOT_FOLDER_NAME), id + '.json'),id:id};
-    if (p.prefix) return ContentService.createTextOutput(String(p.prefix) + '(' + JSON.stringify(result) + ')').setMimeType(ContentService.MimeType.JAVASCRIPT);
-    return json_(result);
+    try {
+      const id = String(p.id || '').trim();
+      if (!id) throw new Error('Falta el ID para verificar.');
+      const found = fileExistsInFolderTree_(getOrCreateFolder_(ROOT_FOLDER_NAME), safe_(id) + '.json');
+      const result = {ok:found, id:id, checkedAt:new Date().toISOString()};
+      if (p.prefix && /^[A-Za-z_$][0-9A-Za-z_$]*$/.test(String(p.prefix))) {
+        return ContentService.createTextOutput(String(p.prefix) + '(' + JSON.stringify(result) + ');').setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return json_(result);
+    } catch (err) {
+      const result = {ok:false, error:String(err && err.message ? err.message : err), id:String(p.id || '')};
+      if (p.prefix && /^[A-Za-z_$][0-9A-Za-z_$]*$/.test(String(p.prefix))) {
+        return ContentService.createTextOutput(String(p.prefix) + '(' + JSON.stringify(result) + ');').setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return json_(result);
+    }
   }
   return json_({ok:true,service:'INSPECCIONES_INFRAESTRUCTURA'});
 }
-function doPost(e){try{let data;if(e&&e.parameter&&e.parameter.payload){data=JSON.parse(e.parameter.payload)}else{const raw=(e&&e.postData&&e.postData.contents)||'{}';try{data=JSON.parse(raw)}catch(parseErr){const params=raw.split('&').reduce((o,p)=>{const i=p.indexOf('=');if(i>=0)o[decodeURIComponent(p.slice(0,i).replace(/\+/g,' '))]=decodeURIComponent(p.slice(i+1).replace(/\+/g,' '));return o},{});data=JSON.parse(params.payload||'{}')}}if(data.action==='syncInspection')return syncInspection_(data);if(data.action==='syncReport')return syncReport_(data);throw new Error('Acción no válida.')}catch(err){return json_({ok:false,error:String(err&&err.message?err.message:err)})}}
-function syncInspection_(data){if(!data.id)throw new Error('Falta el ID de inspección.');const root=getOrCreateFolder_(ROOT_FOLDER_NAME),year=String(data.anio||new Date(data.fecha||Date.now()).getFullYear()),month=safe_(data.mes||'SIN_MES'),day=Utilities.formatDate(new Date(data.fecha||Date.now()),Session.getScriptTimeZone(),'yyyy-MM-dd'),zone=safe_(data.zona||'SIN_ZONA'),point=safe_(data.punto||'SIN_PUNTO'),yearFolder=getOrCreateFolder_(year,root),monthFolder=getOrCreateFolder_(month,yearFolder),dayFolder=getOrCreateFolder_(day,monthFolder),inspectionFolder=getOrCreateFolder_(safe_(data.id)+'_'+zone+'_'+point,dayFolder),jsonName=safe_(data.id)+'.json',existing=inspectionFolder.getFilesByName(jsonName);if(!existing.hasNext()){const metadata=Object.assign({},data),photos=Array.isArray(metadata.fotos)?metadata.fotos:[];metadata.fotos=photos.map((_,i)=>({archivo:safe_(data.id)+'_foto_'+(i+1)+'.jpg'}));metadata.sincronizadoEn=new Date().toISOString();metadata.fotosAlmacenamiento='Google Drive';inspectionFolder.createFile(jsonName,JSON.stringify(metadata,null,2),MimeType.PLAIN_TEXT);photos.forEach((src,i)=>{if(!src||typeof src!=='string')return;const match=src.match(/^data:image\/[^;]+;base64,(.+)$/);if(!match)return;inspectionFolder.createFile(Utilities.newBlob(Utilities.base64Decode(match[1]),'image/jpeg',safe_(data.id)+'_foto_'+(i+1)+'.jpg'));});}return json_({ok:true,id:data.id,folder:inspectionFolder.getUrl()})}
+function doPost(e) {
+  try {
+    let data = null;
+    // Accept both form submissions (payload=...) and raw JSON POSTs.
+    if (e && e.parameter && e.parameter.payload) {
+      data = JSON.parse(e.parameter.payload);
+    } else {
+      const raw = e && e.postData && e.postData.contents ? e.postData.contents : '';
+      if (!raw) throw new Error('La solicitud POST llegó vacía.');
+      try {
+        data = JSON.parse(raw);
+      } catch (jsonError) {
+        const params = {};
+        raw.split('&').forEach(function (part) {
+          const i = part.indexOf('=');
+          if (i < 0) return;
+          const key = decodeURIComponent(part.slice(0, i).replace(/\+/g, ' '));
+          const value = decodeURIComponent(part.slice(i + 1).replace(/\+/g, ' '));
+          params[key] = value;
+        });
+        if (!params.payload) throw new Error('No se encontró el campo payload en la solicitud POST.');
+        data = JSON.parse(params.payload);
+      }
+    }
+    if (!data || !data.action) throw new Error('Falta la acción solicitada.');
+    if (data.action === 'syncInspection') return syncInspection_(data);
+    if (data.action === 'syncReport') return syncReport_(data);
+    throw new Error('Acción no válida: ' + data.action);
+  } catch (err) {
+    console.error('doPost error: ' + String(err && err.stack ? err.stack : err));
+    return json_({ok:false, error:String(err && err.message ? err.message : err)});
+  }
+}
+
+function syncInspection_(data) {
+  if (!data || !data.id) throw new Error('Falta el ID de inspección.');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const root = getOrCreateFolder_(ROOT_FOLDER_NAME);
+    const year = String(data.anio || new Date(data.fecha || Date.now()).getFullYear());
+    const month = safe_(data.mes || 'SIN_MES');
+    const day = Utilities.formatDate(new Date(data.fecha || Date.now()), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    const zone = safe_(data.zona || 'SIN_ZONA');
+    const point = safe_(data.punto || 'SIN_PUNTO');
+    const yearFolder = getOrCreateFolder_(year, root);
+    const monthFolder = getOrCreateFolder_(month, yearFolder);
+    const dayFolder = getOrCreateFolder_(day, monthFolder);
+    const inspectionFolder = getOrCreateFolder_(safe_(data.id) + '_' + zone + '_' + point, dayFolder);
+    const jsonName = safe_(data.id) + '.json';
+    const photos = Array.isArray(data.fotos) ? data.fotos : [];
+    const photoFiles = [];
+
+    // Upload each photo independently and repair missing photos on retries.
+    photos.forEach(function (src, i) {
+      const fileName = safe_(data.id) + '_foto_' + (i + 1) + '.jpg';
+      let fileIt = inspectionFolder.getFilesByName(fileName);
+      if (fileIt.hasNext()) {
+        photoFiles.push({archivo:fileName});
+        return;
+      }
+      if (typeof src !== 'string') return;
+      const match = src.match(/^data:image\/[^;]+;base64,(.+)$/);
+      if (!match) return;
+      const bytes = Utilities.base64Decode(match[1]);
+      const blob = Utilities.newBlob(bytes, 'image/jpeg', fileName);
+      inspectionFolder.createFile(blob);
+      photoFiles.push({archivo:fileName});
+    });
+
+    const metadata = Object.assign({}, data);
+    metadata.fotos = photoFiles;
+    metadata.sincronizadoEn = new Date().toISOString();
+    metadata.fotosAlmacenamiento = 'Google Drive';
+    const existing = inspectionFolder.getFilesByName(jsonName);
+    const jsonText = JSON.stringify(metadata, null, 2);
+    if (existing.hasNext()) {
+      existing.next().setContent(jsonText);
+    } else {
+      inspectionFolder.createFile(jsonName, jsonText, MimeType.PLAIN_TEXT);
+    }
+    return json_({ok:true, id:data.id, folder:inspectionFolder.getUrl(), fotos:photoFiles.length});
+  } finally {
+    lock.releaseLock();
+  }
+}
 function syncReport_(data){const year=safe_(data.anio||new Date().getFullYear()),month=safe_(data.mes||'SIN_MES'),base=safe_(data.nombre||('Reporte_'+year+'_'+month)),html=buildReportHtml_(year,month);if(!html||html.indexOf('No hay inspecciones')>=0)throw new Error('No hay inspecciones sincronizadas en Drive para ese mes.');const root=getOrCreateFolder_(ROOT_FOLDER_NAME),reports=getOrCreateFolder_('REPORTES_MENSUALES',root),yearFolder=getOrCreateFolder_(year,reports),monthFolder=getOrCreateFolder_(month,yearFolder);['.pdf','.html'].forEach(ext=>{const old=monthFolder.getFilesByName(base+ext);while(old.hasNext())old.next().setTrashed(true)});const htmlFile=monthFolder.createFile(base+'.html',html,MimeType.HTML);const pdfFile=monthFolder.createFile(Utilities.newBlob(html,'text/html',base+'.html').getAs(MimeType.PDF).setName(base+'.pdf'));return json_({ok:true,id:base+'.pdf',url:pdfFile.getUrl(),downloadUrl:'https://drive.google.com/uc?export=download&id='+encodeURIComponent(pdfFile.getId()),htmlUrl:htmlFile.getUrl()})}
 
 function buildReportHtml_(year,month){
