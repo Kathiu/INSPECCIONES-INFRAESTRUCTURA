@@ -125,6 +125,12 @@ function doGet(e) {
 
 function doPost(e) {
   try {
+    console.log('doPost recibido; payload en formulario=' +
+      Boolean(e && e.parameter && e.parameter.payload) +
+      '; postData presente=' +
+      Boolean(e && e.postData && e.postData.contents) +
+      '; tipo=' +
+      String(e && e.postData && e.postData.type || 'no indicado'));
     const data = parsePostData_(e);
 
     if (!data || typeof data !== 'object' ||
