@@ -37,7 +37,7 @@ function doGet(e) {
       return json_(result);
     }
   }
-  return json_({ok:true,service:'INSPECCIONES_INFRAESTRUCTURA'});
+  return json_({ok:true,service:'INSPECCIONES_INFRAESTRUCTURA',version:'2.0'});
 }
 function doPost(e) {
   try {
