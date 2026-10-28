@@ -1,0 +1,16 @@
+{
+  "name": "Inspecciones Infraestructura 2",
+  "short_name": "Inspecciones 2",
+  "description": "Aplicación de inspecciones de infraestructura por área y punto, con fotografías, funcionamiento sin conexión y sincronización con Google Drive.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f6f8",
+  "theme_color": "#0b57d0",
+  "lang": "es",
+  "categories": [
+    "business",
+    "productivity"
+  ]
+}
