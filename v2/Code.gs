@@ -1,6 +1,7 @@
 /************************************************************
- * INSPECCIONES DE INFRAESTRUCTURA
- * Backend para Google Apps Script
+ * INSPECCIONES INFRAESTRUCTURA 2
+ * Backend de Google Apps Script independiente
+ * Autorizar/publicar desde: kcorrea@aliexperu.com.pe
  * Version: 1.0
  ************************************************************/
 
@@ -877,4 +878,16 @@ function callbackOrJson_(obj, prefix) {
   }
 
   return json_(obj);
+}
+
+/**
+ * Ejecutar manualmente una sola vez desde el editor de Apps Script.
+ * Crea las carpetas de la nueva aplicación y solicita autorización de Drive.
+ * No lee, mueve ni elimina archivos de la aplicación anterior.
+ */
+function autorizarDriveInspecciones2() {
+  const root = getOrCreateFolder_(ROOT_FOLDER_NAME);
+  getOrCreateFolder_(REPORTS_FOLDER_NAME, root);
+  Logger.log('Autorización de Drive completada. Carpeta: ' + root.getUrl());
+  return root.getUrl();
 }
