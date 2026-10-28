@@ -1,0 +1,51 @@
+INSPECCIONES INFRAESTRUCTURA 2 — GUÍA DE INSTALACIÓN
+
+APP EN GITHUB PAGES
+https://kathiu.github.io/INSPECCIONES-INFRAESTRUCTURA/v2/
+
+ARCHIVO DE APPS SCRIPT
+https://github.com/Kathiu/INSPECCIONES-INFRAESTRUCTURA/blob/main/v2/Code.gs
+
+IMPORTANTE
+Esta versión guarda las inspecciones del teléfono en una base local separada y utiliza las carpetas INSPECCIONES_INFRAESTRUCTURA_2 y REPORTES_MENSUALES_2 en Google Drive. No modifica ni importa automáticamente las 9 inspecciones de la app anterior. No borrar la app anterior hasta revisar sus datos.
+
+PASO 1 — CREAR EL NUEVO APPS SCRIPT
+1. Entra en Chrome y asegúrate de que la cuenta activa sea kcorrea@aliexperu.com.pe.
+2. Abre https://script.google.com/home
+3. Crea un proyecto nuevo y ponle el nombre: Inspecciones Infraestructura 2.
+4. En otra pestaña, abre el enlace del archivo Code.gs arriba. Abre la vista del archivo, copia todo su contenido y pégalo en el archivo Code.gs del proyecto nuevo. Reemplaza el contenido de ese archivo nuevo solamente.
+5. Guarda el proyecto.
+
+PASO 2 — AUTORIZAR DRIVE
+1. En el selector de funciones de Apps Script, elige autorizarDriveInspecciones2.
+2. Pulsa Ejecutar.
+3. Cuando Google pida permisos, acepta con kcorrea@aliexperu.com.pe.
+4. Al terminar, comprueba que en el Drive de esa cuenta exista la carpeta INSPECCIONES_INFRAESTRUCTURA_2. La carpeta REPORTES_MENSUALES_2 se crea dentro de ella.
+
+PASO 3 — PUBLICAR COMO APLICACIÓN WEB
+1. Pulsa Implementar > Nueva implementación.
+2. Selecciona Aplicación web.
+3. Ejecutar como: Yo (kcorrea@aliexperu.com.pe).
+4. Quién tiene acceso: Cualquiera.
+5. Pulsa Implementar y autoriza si Google vuelve a pedir permiso.
+6. Copia la URL de la aplicación web que termina en /exec.
+
+PASO 4 — CONECTAR LA APP AL DRIVE
+1. Abre https://kathiu.github.io/INSPECCIONES-INFRAESTRUCTURA/v2/
+2. Pulsa Conectar Google Drive.
+3. Pega la URL /exec nueva que copiaste de la implementación de Inspecciones Infraestructura 2. Pulsa Aceptar.
+4. La aplicación guardará esa dirección en el navegador de ese dispositivo.
+
+PASO 5 — PRUEBA CONTROLADA
+1. Crea una inspección de prueba con un área y punto, una observación breve y una fotografía opcional.
+2. Guarda la inspección y espera a que la app intente sincronizarla.
+3. Verifica en el Drive de kcorrea@aliexperu.com.pe que esté la carpeta INSPECCIONES_INFRAESTRUCTURA_2 y que dentro aparezca la inspección.
+4. Comprueba que la aplicación indique que la inspección está sincronizada antes de empezar a registrar datos de trabajo.
+
+SI LA APP NO SE ABRE
+El código está publicado dentro de una subcarpeta de un repositorio que ya usa GitHub Pages. Abre el enlace exacto de la app de arriba y recarga la página. Si GitHub Pages todavía no muestra la carpeta, verifica en el repositorio que GitHub Pages esté habilitado desde la rama main.
+
+RECOMENDACIONES
+- La dirección /exec debe ser la del proyecto nuevo; no reutilices la URL de la app anterior.
+- No compartas la URL del editor de Apps Script. La app necesita la URL de implementación terminada en /exec.
+- Mantén la app anterior mientras revisas o recuperas sus 9 inspecciones.
